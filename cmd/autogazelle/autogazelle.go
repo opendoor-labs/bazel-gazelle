@@ -41,6 +41,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/bazelbuild/bazel-gazelle/config"
+	"github.com/bazelbuild/bazel-gazelle/rule"
+	"github.com/bazelbuild/bazel-gazelle/walk"
 )
 
 var (
@@ -118,17 +122,18 @@ func runGazelle(mode mode, dirs []string) error {
 // restoreBuildFilesInRepo copies BUILD.in and BUILD.bazel.in files and
 // copies them to BUILD and BUILD.bazel.
 func restoreBuildFilesInRepo() {
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			log.Print(err)
-			return nil
+	walkWorkspace(".", func(dir string, files []string) {
+		for _, file := range files {
+			if file != "BUILD.bazel.in" && file != "BUILD.in" {
+				continue
+			}
+
+			path := filepath.Join(dir, file)
+			if err := restoreFile(path, strings.TrimSuffix(path, ".in")); err != nil {
+				log.Print(err)
+			}
 		}
-		restoreBuildFilesInDir(path)
-		return nil
 	})
-	if err != nil {
-		log.Print(err)
-	}
 }
 
 func restoreBuildFilesInDir(dir string) {
@@ -138,7 +143,7 @@ func restoreBuildFilesInDir(dir string) {
 		if err != nil {
 			continue
 		}
-		if err := restoreFile(filepath.Join(dir, base+".in"), filepath.Join(dir, base)); err != nil {
+		if err := restoreFile(inPath, filepath.Join(dir, base)); err != nil {
 			log.Print(err)
 		}
 	}
@@ -172,4 +177,37 @@ func restoreFile(src, dest string) (err error) {
 
 	_, err = io.Copy(w, r)
 	return err
+}
+
+// walkWorkspace traverses the directory tree rooted at `root`, while respecting
+// gazelle directives including exclude, follow, and ignore. `walkFunc` will be
+// called for each directory with `dir` being the absolute path to the directory,
+// and `files` is a list of base names of regular files within the directory, not
+// including excluded files.
+func walkWorkspace(root string, walkFunc func(dir string, files []string)) {
+	cext := &walk.Configurer{}
+	cexts := []config.Configurer{cext}
+	for _, lang := range languages {
+		cexts = append(cexts, lang)
+	}
+
+	root, err := filepath.Abs(root)
+	if err != nil {
+		log.Printf("failed to find absolute path: %v", err)
+		return
+	}
+
+	c := config.New()
+	c.RepoRoot = root
+	for _, cext := range cexts {
+		cext.RegisterFlags(&flag.FlagSet{}, "", c)
+	}
+
+	dirs := []string{root}
+
+	mode := walk.VisitAllUpdateSubdirsMode
+
+	walk.Walk(c, cexts, dirs, mode, func(dir, rel string, c *config.Config, update bool, f *rule.File, subdirs, regularFiles, genFiles []string) {
+		walkFunc(dir, regularFiles)
+	})
 }
