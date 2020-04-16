@@ -5,6 +5,7 @@ GO_REPOSITORY_TOOLS_SRCS = [
 	"@bazel_gazelle//cmd/autogazelle:BUILD.bazel",
 	"@bazel_gazelle//cmd/autogazelle:autogazelle.go",
 	"@bazel_gazelle//cmd/autogazelle:client_unix.go",
+	"@bazel_gazelle//cmd/autogazelle:langs.go",
 	"@bazel_gazelle//cmd/autogazelle:server_unix.go",
 	"@bazel_gazelle//cmd/fetch_repo:BUILD.bazel",
 	"@bazel_gazelle//cmd/fetch_repo:fetch_repo.go",

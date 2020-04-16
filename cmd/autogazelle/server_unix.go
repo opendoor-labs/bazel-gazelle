@@ -199,25 +199,14 @@ func watchDir(root string, record func(string)) (cancel func(), err error) {
 	return func() { close(done) }, nil
 }
 
-// listDirs returns a slice containing all the subdirectories under dir,
-// including dir itself.
-func listDirs(dir string) ([]string, []error) {
+// listDirs returns a slice containing all the subdirectories under root,
+// including root itself.
+func listDirs(root string) ([]string, []error) {
 	var dirs []string
-	var errs []error
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			errs = append(errs, err)
-			return nil
-		}
-		if info.IsDir() {
-			dirs = append(dirs, path)
-		}
-		return nil
+	walkWorkspace(root, func(dir string, files []string) {
+		dirs = append(dirs, dir)
 	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-	return dirs, errs
+	return dirs, nil
 }
 
 // shouldIgnore returns whether a write to the given file should be ignored
