@@ -39,6 +39,8 @@ type updateReposConfig struct {
 	macroFileName string
 	macroDefName  string
 	pruneRules    bool
+	goProxy       string
+	goPrivate     string
 	workspace     *rule.File
 	repoFileMap   map[string]*rule.File
 }
@@ -79,6 +81,8 @@ func (*updateReposConfigurer) RegisterFlags(fs *flag.FlagSet, cmd string, c *con
 	fs.StringVar(&uc.repoFilePath, "from_file", "", "Gazelle will translate repositories listed in this file into repository rules in WORKSPACE or a .bzl macro function. Gopkg.lock and go.mod files are supported")
 	fs.Var(macroFlag{macroFileName: &uc.macroFileName, macroDefName: &uc.macroDefName}, "to_macro", "Tells Gazelle to write repository rules into a .bzl macro function rather than the WORKSPACE file. . The expected format is: macroFile%defName")
 	fs.BoolVar(&uc.pruneRules, "prune", false, "When enabled, Gazelle will remove rules that no longer have equivalent repos in the Gopkg.lock/go.mod file. Can only used with -from_file.")
+	fs.StringVar(&uc.goProxy, "go_proxy", "", "URL of Go module proxy to use if not using the default.")
+	fs.StringVar(&uc.goPrivate, "go_private", "", "Comma-separated list of glob patterns of module paths that should not be fetched from the Go module proxy")
 }
 
 func (*updateReposConfigurer) CheckFlags(fs *flag.FlagSet, c *config.Config) error {
@@ -378,10 +382,12 @@ func importRepos(c *config.Config, rc *repo.RemoteCache) (gen, empty []*rule.Rul
 		}
 	}
 	res := importer.ImportRepos(language.ImportReposArgs{
-		Config: c,
-		Path:   uc.repoFilePath,
-		Prune:  uc.pruneRules,
-		Cache:  rc,
+		Config:    c,
+		Path:      uc.repoFilePath,
+		Prune:     uc.pruneRules,
+		GoProxy:   uc.goProxy,
+		GoPrivate: uc.goPrivate,
+		Cache:     rc,
 	})
 	return res.Gen, res.Empty, res.Error
 }

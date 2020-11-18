@@ -97,6 +97,13 @@ type ImportReposArgs struct {
 	// filled in.
 	Prune bool
 
+	// GoProxy is the URL of the Go module proxy to use.
+	GoProxy string
+
+	// GoPrivate controls which modules are considered private and should not be
+	// fetched from the Go module proxy.
+	GoPrivate string
+
 	// Cache stores information fetched from the network and ensures that
 	// the same request isn't made multiple times.
 	Cache *repo.RemoteCache
